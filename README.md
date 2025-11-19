@@ -7,7 +7,7 @@
 ```
 curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/backup.sh -o /opt/backup.sh
 ```
-3. В секции #Telegram settings замените значения "YOUR_BOT_TOKEN" и "YOUR_CHAT_ID" на свои
+2. В секции #Telegram settings замените значения "YOUR_BOT_TOKEN" и "YOUR_CHAT_ID" на свои
 
 ## Где взять YOUR_BOT_TOKEN и YOUR_CHAT_ID
 
