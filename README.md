@@ -7,8 +7,11 @@
 ```
 curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/backup.sh -o /opt/backup.sh
 ```
+2. Сделайте скрипт исполняемым
+```
+chmod +x /opt/backup.sh
+```
 2. Любым встроенным редактором в секции #Telegram settings замените значения "YOUR_BOT_TOKEN" и "YOUR_CHAT_ID" на свои, например
-
 ```
 nano /opt/backup.sh
 ```
