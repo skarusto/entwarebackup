@@ -3,8 +3,11 @@
 Скрипт предназначен для создания бэкапа Entware и автоматической отправки его в Telegram
 
 ## Установка
-1. Скопируйте скрипт на флешку, на которую установлен Entware
-2. В секции #Telegram settings замените значения "YOUR_BOT_TOKEN" и "YOUR_CHAT_ID" на свои
+1. Скопируйте скрипт в свою Entware
+```
+curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/backup.sh -o /opt/backup.sh
+```
+3. В секции #Telegram settings замените значения "YOUR_BOT_TOKEN" и "YOUR_CHAT_ID" на свои
 
 ## Где взять YOUR_BOT_TOKEN и YOUR_CHAT_ID
 
