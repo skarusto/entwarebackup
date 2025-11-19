@@ -28,15 +28,21 @@
 
 Установите cron
 
-```opkg install cron```
+```
+ opkg install cron
+```
 
 Проверьте статус службы
 
-`/opt/etc/init.d/S10cron status`
+ ```
+ /opt/etc/init.d/S10cron status
+ ```
 
 Если служба не запущена, запустите её
 
-`/opt/etc/init.d/S10cron start`
+ ```
+/opt/etc/init.d/S10cron start
+ ```
 
 После установки cron в `/opt/etc` будут автоматически созданы каталоги `cron.{hourly,daily,weekly,monthly}`, для которых уже преднастроено автоматическое выполнение каждый час/день/неделю/месяц.
 
