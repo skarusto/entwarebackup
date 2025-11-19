@@ -3,7 +3,7 @@
 Скрипт предназначен для создания бэкапа Entware и автоматической отправки его в Telegram
 
 ## Установка
-1. Скопируйте скрипт в свою Entware
+1. Скопируйте скрипт к себе в Entware
 ```
 curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/backup.sh -o /opt/backup.sh
 ```
