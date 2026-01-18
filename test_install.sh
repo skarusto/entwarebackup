@@ -25,7 +25,7 @@ echo "${BLUE}  Entware Backup Script Installer${NC}"
 echo "${BLUE}========================================${NC}"
 echo ""
 
-# Install dependencies
+# Step 1: Install dependencies
 echo "${YELLOW}[1/7] Installing dependencies...${NC}"
 echo "Installing curl..."
 opkg update >/dev/null 2>&1 || true
@@ -37,7 +37,7 @@ opkg install cron >/dev/null 2>&1
 echo "${GREEN}✓ cron installed${NC}"
 echo ""
 
-# Download backup script
+# Step 2: Download backup script
 echo "${YELLOW}[2/7] Downloading backup script from GitHub...${NC}"
 if curl -f -L -o "$TEMP_SCRIPT" "$BACKUP_SCRIPT_URL" 2>/dev/null; then
     echo "${GREEN}✓ Script downloaded successfully${NC}"
@@ -48,13 +48,13 @@ else
 fi
 echo ""
 
-# Make script executable
+# Step 3: Make script executable
 echo "${YELLOW}[3/7] Making script executable...${NC}"
 chmod +x "$TEMP_SCRIPT"
 echo "${GREEN}✓ Script is now executable${NC}"
 echo ""
 
-# Request user variables
+# Step 4: Request user variables
 echo "${YELLOW}[4/7] Configuration - Please provide the following information:${NC}"
 echo ""
 
@@ -84,17 +84,22 @@ echo ""
 echo "${GREEN}✓ Configuration received${NC}"
 echo ""
 
-# Update variables in the script
+# Step 5: Update variables in the script
 echo "${YELLOW}[5/7] Updating script with your credentials...${NC}"
 
-sed -i "s/BOT_TOKEN=\"YOUR_BOT_TOKEN\"/BOT_TOKEN=\"$BOT_TOKEN\"/" "$TEMP_SCRIPT"
-sed -i "s/GROUP_CHAT_ID=\"YOUR_CHAT_ID\"/GROUP_CHAT_ID=\"$GROUP_CHAT_ID\"/" "$TEMP_SCRIPT"
-sed -i "s/ROUTER_NAME=\"Keenetic\"/ROUTER_NAME=\"$ROUTER_NAME\"/" "$TEMP_SCRIPT"
+# Escape special characters for sed
+BOT_TOKEN_ESC=$(printf '%s\n' "$BOT_TOKEN" | sed -e 's/[\/&]/\\&/g')
+GROUP_CHAT_ID_ESC=$(printf '%s\n' "$GROUP_CHAT_ID" | sed -e 's/[\/&]/\\&/g')
+ROUTER_NAME_ESC=$(printf '%s\n' "$ROUTER_NAME" | sed -e 's/[\/&]/\\&/g')
+
+sed -i "s/BOT_TOKEN=\"YOUR_BOT_TOKEN\"/BOT_TOKEN=\"$BOT_TOKEN_ESC\"/" "$TEMP_SCRIPT"
+sed -i "s/GROUP_CHAT_ID=\"YOUR_CHAT_ID\"/GROUP_CHAT_ID=\"$GROUP_CHAT_ID_ESC\"/" "$TEMP_SCRIPT"
+sed -i "s/ROUTER_NAME=\"Keenetic\"/ROUTER_NAME=\"$ROUTER_NAME_ESC\"/" "$TEMP_SCRIPT"
 
 echo "${GREEN}✓ Script configuration updated${NC}"
 echo ""
 
-# Configure cron scheduling
+# Step 6: Configure cron scheduling
 echo "${YELLOW}[6/7] Configure automatic backup scheduling${NC}"
 echo ""
 echo "Select backup frequency:"
@@ -153,7 +158,7 @@ fi
 
 echo ""
 
-# Summary
+# Step 7: Summary
 echo "${YELLOW}[7/7] Installation Summary${NC}"
 echo ""
 echo "${BLUE}========================================${NC}"
@@ -164,6 +169,10 @@ echo "${BLUE}Installation Details:${NC}"
 echo "  📁 Script location: ${GREEN}$FINAL_SCRIPT_PATH${NC}"
 echo "  🤖 Router name: ${GREEN}$ROUTER_NAME${NC}"
 echo "  ⏰ Backup frequency: ${GREEN}$CRON_FREQUENCY${NC}"
+echo ""
+echo "${BLUE}Next steps:${NC}"
+echo "  • Test the backup manually: ${GREEN}$FINAL_SCRIPT_PATH${NC}"
+echo "  • Check logs: ${GREEN}/opt/backup_log.log${NC}"
 echo ""
 echo "${BLUE}Manual execution:${NC}"
 echo "  Run: ${GREEN}$FINAL_SCRIPT_PATH${NC}"
