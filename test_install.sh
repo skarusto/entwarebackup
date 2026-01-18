@@ -5,6 +5,9 @@
 #
 # Quick install:
 #   curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/test_install.sh | sh
+#
+# Or download and run locally:
+#   chmod +x install.sh && ./install.sh
 
 set -e
 
@@ -87,14 +90,14 @@ echo ""
 # Step 5: Update variables in the script
 echo "${YELLOW}[5/7] Updating script with your credentials...${NC}"
 
-# Escape special characters for sed
-BOT_TOKEN_ESC=$(printf '%s\n' "$BOT_TOKEN" | sed -e 's/[\/&]/\\&/g')
-GROUP_CHAT_ID_ESC=$(printf '%s\n' "$GROUP_CHAT_ID" | sed -e 's/[\/&]/\\&/g')
-ROUTER_NAME_ESC=$(printf '%s\n' "$ROUTER_NAME" | sed -e 's/[\/&]/\\&/g')
+# Escape special characters for sed using | as delimiter instead of /
+BOT_TOKEN_ESC=$(printf '%s\n' "$BOT_TOKEN" | sed -e 's/[|&\]/\\&/g')
+GROUP_CHAT_ID_ESC=$(printf '%s\n' "$GROUP_CHAT_ID" | sed -e 's/[|&\]/\\&/g')
+ROUTER_NAME_ESC=$(printf '%s\n' "$ROUTER_NAME" | sed -e 's/[|&\]/\\&/g')
 
-sed -i "s/BOT_TOKEN=\"YOUR_BOT_TOKEN\"/BOT_TOKEN=\"$BOT_TOKEN_ESC\"/" "$TEMP_SCRIPT"
-sed -i "s/GROUP_CHAT_ID=\"YOUR_CHAT_ID\"/GROUP_CHAT_ID=\"$GROUP_CHAT_ID_ESC\"/" "$TEMP_SCRIPT"
-sed -i "s/ROUTER_NAME=\"Keenetic\"/ROUTER_NAME=\"$ROUTER_NAME_ESC\"/" "$TEMP_SCRIPT"
+sed -i "s|BOT_TOKEN=\"YOUR_BOT_TOKEN\"|BOT_TOKEN=\"$BOT_TOKEN_ESC\"|" "$TEMP_SCRIPT"
+sed -i "s|GROUP_CHAT_ID=\"YOUR_CHAT_ID\"|GROUP_CHAT_ID=\"$GROUP_CHAT_ID_ESC\"|" "$TEMP_SCRIPT"
+sed -i "s|ROUTER_NAME=\"Keenetic\"|ROUTER_NAME=\"$ROUTER_NAME_ESC\"|" "$TEMP_SCRIPT"
 
 echo "${GREEN}✓ Script configuration updated${NC}"
 echo ""
