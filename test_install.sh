@@ -40,11 +40,11 @@ echo ""
 echo "${YELLOW}[1/7] Installing dependencies...${NC}"
 echo "Installing curl..."
 opkg update >/dev/null 2>&1 || true
-opkg install curl >/dev/null 2>&1
+opkg install curl >/dev/null 2>&1 || true
 echo "${GREEN}✓ curl installed${NC}"
 
 echo "Installing cron..."
-opkg install cron >/dev/null 2>&1
+opkg install cron >/dev/null 2>&1 || true
 echo "${GREEN}✓ cron installed${NC}"
 echo ""
 
@@ -54,10 +54,17 @@ if curl -f -L -o "$TEMP_SCRIPT" "$BACKUP_SCRIPT_URL" 2>/dev/null; then
     echo "${GREEN}✓ Script downloaded successfully${NC}"
 else
     echo "${RED}✗ Failed to download script from GitHub${NC}"
+    echo "${RED}URL: $BACKUP_SCRIPT_URL${NC}"
     rm -f "$TEMP_SCRIPT"
     exit 1
 fi
 echo ""
+
+# Verify file was downloaded
+if [ ! -f "$TEMP_SCRIPT" ]; then
+    echo "${RED}✗ ERROR: Script file not found at $TEMP_SCRIPT${NC}"
+    exit 1
+fi
 
 # Step 3: Make script executable
 echo "${YELLOW}[3/7] Making script executable...${NC}"
@@ -98,14 +105,22 @@ echo ""
 # Step 5: Update variables in the script using awk (safer than sed for arbitrary data)
 echo "${YELLOW}[5/7] Updating script with your credentials...${NC}"
 
+# Create temporary awk script to handle the substitutions safely
 awk -v bot="$BOT_TOKEN" -v chat="$GROUP_CHAT_ID" -v router="$ROUTER_NAME" '
     /^BOT_TOKEN="YOUR_BOT_TOKEN"/ { print "BOT_TOKEN=\"" bot "\""; next }
     /^GROUP_CHAT_ID="YOUR_CHAT_ID"/ { print "GROUP_CHAT_ID=\"" chat "\""; next }
     /^ROUTER_NAME="Keenetic"/ { print "ROUTER_NAME=\"" router "\""; next }
     { print }
-' "$TEMP_SCRIPT" > "$TEMP_SCRIPT.new" && mv "$TEMP_SCRIPT.new" "$TEMP_SCRIPT"
+' "$TEMP_SCRIPT" > "$TEMP_SCRIPT.new"
 
-echo "${GREEN}✓ Script configuration updated${NC}"
+if [ $? -eq 0 ] && [ -f "$TEMP_SCRIPT.new" ]; then
+    mv "$TEMP_SCRIPT.new" "$TEMP_SCRIPT"
+    echo "${GREEN}✓ Script configuration updated${NC}"
+else
+    echo "${RED}✗ Failed to update script configuration${NC}"
+    rm -f "$TEMP_SCRIPT" "$TEMP_SCRIPT.new"
+    exit 1
+fi
 echo ""
 
 # Step 6: Configure cron scheduling
@@ -153,9 +168,9 @@ esac
 
 if [ -n "$CRON_PATH" ]; then
     FINAL_SCRIPT_PATH="$CRON_PATH/backup.sh"
-    mv "$TEMP_SCRIPT" "$FINAL_SCRIPT_PATH"
+    mv "$TEMP_SCRIPT" "$FINAL_SCRIPT_PATH" || exit 1
 else
-    mv "$TEMP_SCRIPT" "$BACKUP_SCRIPT_PATH"
+    mv "$TEMP_SCRIPT" "$BACKUP_SCRIPT_PATH" || exit 1
 fi
 
 chmod +x "$FINAL_SCRIPT_PATH"
