@@ -5,7 +5,7 @@ BOT_TOKEN="YOUR_BOT_TOKEN"
 GROUP_CHAT_ID="YOUR_CHAT_ID"
 
 # Router settings
-ROUTER_NAME="YOUR_ROUTER_NAME"
+ROUTER_NAME="Keenetic"
 
 # Backup settings
 BACKUP_FILE="/opt/opkg_backup_${ROUTER_NAME}_$(date +%Y%m%d).tar.gz"
