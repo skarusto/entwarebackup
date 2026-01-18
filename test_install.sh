@@ -11,12 +11,20 @@
 
 set -e
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Colors for output - only if TTY
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    NC=''
+fi
 
 # Configuration
 BACKUP_SCRIPT_URL="https://raw.githubusercontent.com/skarusto/entwarebackup/main/backup.sh"
@@ -87,17 +95,15 @@ echo ""
 echo "${GREEN}✓ Configuration received${NC}"
 echo ""
 
-# Step 5: Update variables in the script
+# Step 5: Update variables in the script using awk (safer than sed for arbitrary data)
 echo "${YELLOW}[5/7] Updating script with your credentials...${NC}"
 
-# Escape special characters for sed using | as delimiter instead of /
-BOT_TOKEN_ESC=$(printf '%s\n' "$BOT_TOKEN" | sed -e 's/[|&\]/\\&/g')
-GROUP_CHAT_ID_ESC=$(printf '%s\n' "$GROUP_CHAT_ID" | sed -e 's/[|&\]/\\&/g')
-ROUTER_NAME_ESC=$(printf '%s\n' "$ROUTER_NAME" | sed -e 's/[|&\]/\\&/g')
-
-sed -i "s|BOT_TOKEN=\"YOUR_BOT_TOKEN\"|BOT_TOKEN=\"$BOT_TOKEN_ESC\"|" "$TEMP_SCRIPT"
-sed -i "s|GROUP_CHAT_ID=\"YOUR_CHAT_ID\"|GROUP_CHAT_ID=\"$GROUP_CHAT_ID_ESC\"|" "$TEMP_SCRIPT"
-sed -i "s|ROUTER_NAME=\"Keenetic\"|ROUTER_NAME=\"$ROUTER_NAME_ESC\"|" "$TEMP_SCRIPT"
+awk -v bot="$BOT_TOKEN" -v chat="$GROUP_CHAT_ID" -v router="$ROUTER_NAME" '
+    /^BOT_TOKEN="YOUR_BOT_TOKEN"/ { print "BOT_TOKEN=\"" bot "\""; next }
+    /^GROUP_CHAT_ID="YOUR_CHAT_ID"/ { print "GROUP_CHAT_ID=\"" chat "\""; next }
+    /^ROUTER_NAME="Keenetic"/ { print "ROUTER_NAME=\"" router "\""; next }
+    { print }
+' "$TEMP_SCRIPT" > "$TEMP_SCRIPT.new" && mv "$TEMP_SCRIPT.new" "$TEMP_SCRIPT"
 
 echo "${GREEN}✓ Script configuration updated${NC}"
 echo ""
