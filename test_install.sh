@@ -3,11 +3,14 @@
 # Installer script for Entware backup automation
 # This script installs dependencies, downloads the backup script, and configures scheduling
 #
-# Quick install:
+# Quick install (interactive):
 #   curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/test_install.sh | sh
 #
 # Or download and run locally:
 #   chmod +x install.sh && ./install.sh
+#
+# With environment variables (non-interactive):
+#   BOT_TOKEN="123:ABC" CHAT_ID="999" ROUTER_NAME="MyRouter" curl -fsSL https://raw.githubusercontent.com/skarusto/entwarebackup/main/install.sh | sh
 
 set -e
 
@@ -72,32 +75,54 @@ chmod +x "$TEMP_SCRIPT"
 echo "${GREEN}✓ Script is now executable${NC}"
 echo ""
 
-# Step 4: Request user variables
+# Step 4: Request user variables (or use environment variables)
 echo "${YELLOW}[4/7] Configuration - Please provide the following information:${NC}"
 echo ""
 
-echo -n "${BLUE}Enter your Telegram Bot Token:${NC} "
-read -r BOT_TOKEN
-while [ -z "$BOT_TOKEN" ]; do
-    echo -n "${RED}Bot Token cannot be empty. Please try again:${NC} "
+# Check if running in interactive mode (TTY)
+if [ -t 0 ]; then
+    # Interactive mode - ask user
+    echo -n "${BLUE}Enter your Telegram Bot Token:${NC} "
     read -r BOT_TOKEN
-done
-echo ""
+    if [ -z "$BOT_TOKEN" ]; then
+        echo "${RED}✗ Bot Token cannot be empty${NC}"
+        exit 1
+    fi
+    echo ""
 
-echo -n "${BLUE}Enter your Telegram Chat ID:${NC} "
-read -r GROUP_CHAT_ID
-while [ -z "$GROUP_CHAT_ID" ]; do
-    echo -n "${RED}Chat ID cannot be empty. Please try again:${NC} "
+    echo -n "${BLUE}Enter your Telegram Chat ID:${NC} "
     read -r GROUP_CHAT_ID
-done
-echo ""
+    if [ -z "$GROUP_CHAT_ID" ]; then
+        echo "${RED}✗ Chat ID cannot be empty${NC}"
+        exit 1
+    fi
+    echo ""
 
-echo -n "${BLUE}Enter your Router Name (e.g., Keenetic):${NC} "
-read -r ROUTER_NAME
-if [ -z "$ROUTER_NAME" ]; then
-    ROUTER_NAME="Router"
+    echo -n "${BLUE}Enter your Router Name (e.g., Keenetic):${NC} "
+    read -r ROUTER_NAME
+    if [ -z "$ROUTER_NAME" ]; then
+        ROUTER_NAME="Router"
+    fi
+    echo ""
+else
+    # Non-interactive mode - use environment variables
+    if [ -z "$BOT_TOKEN" ]; then
+        echo "${RED}✗ ERROR: BOT_TOKEN not provided${NC}"
+        echo "${BLUE}Usage (non-interactive):${NC}"
+        echo "  BOT_TOKEN=\"your_token\" CHAT_ID=\"your_id\" curl -fsSL ... | sh"
+        exit 1
+    fi
+    if [ -z "$CHAT_ID" ]; then
+        echo "${RED}✗ ERROR: CHAT_ID not provided${NC}"
+        echo "${BLUE}Usage (non-interactive):${NC}"
+        echo "  BOT_TOKEN=\"your_token\" CHAT_ID=\"your_id\" curl -fsSL ... | sh"
+        exit 1
+    fi
+    GROUP_CHAT_ID="$CHAT_ID"
+    ROUTER_NAME="${ROUTER_NAME:-Router}"
+    echo "${GREEN}✓ Configuration received from environment variables${NC}"
+    echo ""
 fi
-echo ""
 
 echo "${GREEN}✓ Configuration received${NC}"
 echo ""
@@ -126,19 +151,29 @@ echo ""
 # Step 6: Configure cron scheduling
 echo "${YELLOW}[6/7] Configure automatic backup scheduling${NC}"
 echo ""
-echo "Select backup frequency:"
-echo "  1) Do not configure automatic backups"
-echo "  2) Every hour (cron.hourly)"
-echo "  3) Daily (cron.daily)"
-echo "  4) Weekly (cron.weekly)"
-echo "  5) Monthly (cron.monthly)"
-echo ""
 
-echo -n "${BLUE}Enter your choice (1-5):${NC} "
-read -r CRON_CHOICE
+# Check if running in interactive mode
+if [ -t 0 ]; then
+    # Interactive mode
+    echo "Select backup frequency:"
+    echo "  1) Do not configure automatic backups"
+    echo "  2) Every hour (cron.hourly)"
+    echo "  3) Daily (cron.daily)"
+    echo "  4) Weekly (cron.weekly)"
+    echo "  5) Monthly (cron.monthly)"
+    echo ""
+
+    echo -n "${BLUE}Enter your choice (1-5):${NC} "
+    read -r CRON_CHOICE
+else
+    # Non-interactive mode - use environment variable or default to 3 (daily)
+    CRON_CHOICE="${CRON_FREQUENCY:-3}"
+    echo "Using CRON_FREQUENCY from environment: $CRON_CHOICE (default: 3=Daily)"
+    echo ""
+fi
 
 CRON_PATH=""
-CRON_FREQUENCY="Not configured - Manual execution only"
+CRON_FREQUENCY_TEXT="Not configured - Manual execution only"
 FINAL_SCRIPT_PATH="$BACKUP_SCRIPT_PATH"
 
 case "$CRON_CHOICE" in
@@ -147,19 +182,19 @@ case "$CRON_CHOICE" in
         ;;
     2)
         CRON_PATH="/etc/cron.hourly"
-        CRON_FREQUENCY="Every hour"
+        CRON_FREQUENCY_TEXT="Every hour"
         ;;
     3)
         CRON_PATH="/etc/cron.daily"
-        CRON_FREQUENCY="Daily"
+        CRON_FREQUENCY_TEXT="Daily"
         ;;
     4)
         CRON_PATH="/etc/cron.weekly"
-        CRON_FREQUENCY="Weekly"
+        CRON_FREQUENCY_TEXT="Weekly"
         ;;
     5)
         CRON_PATH="/etc/cron.monthly"
-        CRON_FREQUENCY="Monthly"
+        CRON_FREQUENCY_TEXT="Monthly"
         ;;
     *)
         echo "${RED}✗ Invalid choice. Skipping cron configuration.${NC}"
@@ -177,7 +212,7 @@ chmod +x "$FINAL_SCRIPT_PATH"
 
 if [ -n "$CRON_PATH" ]; then
     echo "${GREEN}✓ Backup script moved to $CRON_PATH${NC}"
-    echo "${GREEN}✓ Cron job configured: $CRON_FREQUENCY${NC}"
+    echo "${GREEN}✓ Cron job configured: $CRON_FREQUENCY_TEXT${NC}"
 fi
 
 echo ""
@@ -192,7 +227,7 @@ echo ""
 echo "${BLUE}Installation Details:${NC}"
 echo "  📁 Script location: ${GREEN}$FINAL_SCRIPT_PATH${NC}"
 echo "  🤖 Router name: ${GREEN}$ROUTER_NAME${NC}"
-echo "  ⏰ Backup frequency: ${GREEN}$CRON_FREQUENCY${NC}"
+echo "  ⏰ Backup frequency: ${GREEN}$CRON_FREQUENCY_TEXT${NC}"
 echo ""
 echo "${BLUE}Next steps:${NC}"
 echo "  • Test the backup manually: ${GREEN}$FINAL_SCRIPT_PATH${NC}"
