@@ -34,27 +34,67 @@ else
     exit 1
 fi
 
-# Check file size
-MAX_SIZE_MB=50
-if [ $FILE_SIZE_MB -gt $MAX_SIZE_MB ]; then
-    log "Backup is too large: ${FILE_SIZE_MB} MB > ${MAX_SIZE_MB} MB"
-    curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-        -d chat_id="$GROUP_CHAT_ID" \
-        -d text="❌ Backup not sent: size ${FILE_SIZE_MB}MB exceeds ${MAX_SIZE_MB}MB limit" >/dev/null
-    rm -f "$BACKUP_FILE"
-    exit 1
-fi
+# Keep each upload below Telegram's file size limit (49 MB in bytes).
+MAX_SIZE_BYTES=49000000
+PARTS_DIR=""
 
-# Send to Telegram
-RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" \
-    -F chat_id="$GROUP_CHAT_ID" \
-    -F document=@"$BACKUP_FILE" \
-    -F caption="✅ Entware backup from $(date '+%d.%m.%Y')")
+cleanup_parts() {
+    if [ -n "$PARTS_DIR" ]; then
+        rm -rf "$PARTS_DIR"
+    fi
+}
+trap cleanup_parts EXIT
+trap 'exit 1' HUP INT TERM
 
-# Check send result
-if echo "$RESPONSE" | grep -q '"ok":true'; then
-    log "Backup successfully sent to Telegram"
-    rm -f "$BACKUP_FILE"
+send_document() {
+    RESPONSE=$(curl -sS -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" \
+        -F chat_id="$GROUP_CHAT_ID" \
+        -F document=@"$1" \
+        -F caption="$2")
+    CURL_STATUS=$?
+
+    if [ "$CURL_STATUS" -eq 0 ] && printf '%s\n' "$RESPONSE" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+        return 0
+    fi
+    log "Error sending backup to Telegram (curl status $CURL_STATUS): $RESPONSE"
+    return 1
+}
+
+CAPTION="✅ Entware backup from $(date '+%d.%m.%Y')"
+if [ "$FILE_SIZE" -gt "$MAX_SIZE_BYTES" ]; then
+    if ! command -v split >/dev/null 2>&1; then
+        log "Error: split is required for large backups; archive retained: $BACKUP_FILE"
+        exit 1
+    fi
+
+    # Use disk beside the backup rather than the router's RAM-backed /tmp.
+    PARTS_DIR=$(mktemp -d "${BACKUP_FILE}.parts.XXXXXX") || {
+        log "Error creating temporary directory; archive retained: $BACKUP_FILE"
+        exit 1
+    }
+    PART_PREFIX="$PARTS_DIR/${BACKUP_FILE##*/}.part-"
+    if ! split -b "$MAX_SIZE_BYTES" -a 4 "$BACKUP_FILE" "$PART_PREFIX"; then
+        log "Error splitting backup; archive retained: $BACKUP_FILE"
+        exit 1
+    fi
+
+    set -- "$PART_PREFIX"*
+    TOTAL_PARTS=$#
+    PART_NUMBER=0
+    for PART_FILE do
+        PART_NUMBER=$((PART_NUMBER + 1))
+        if ! send_document "$PART_FILE" "$CAPTION (part $PART_NUMBER/$TOTAL_PARTS)"; then
+            log "Upload failed at part $PART_NUMBER/$TOTAL_PARTS; archive retained: $BACKUP_FILE"
+            exit 1
+        fi
+        log "Backup part $PART_NUMBER/$TOTAL_PARTS successfully sent to Telegram"
+    done
 else
-    log "Error sending backup to Telegram: $RESPONSE"
+    if ! send_document "$BACKUP_FILE" "$CAPTION"; then
+        log "Archive retained: $BACKUP_FILE"
+        exit 1
+    fi
 fi
+
+log "Backup successfully sent to Telegram"
+rm -f "$BACKUP_FILE"
